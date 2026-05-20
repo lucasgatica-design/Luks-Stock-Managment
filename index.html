@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Luk's Stock Manager</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-[#121214] text-[#e1e1e6] font-sans min-h-screen antialiased selection:bg-emerald-500 selection:text-black">
+
+    <div class="max-w-6xl mx-auto px-4 py-8">
+        
+        <header class="mb-8">
+            <div class="bg-gradient-to-r from-[#202024] to-[#121214] p-6 rounded-2xl border border-[#29292e] shadow-inner flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <div class="flex items-center gap-3">
+                        <span class="text-2xl bg-emerald-500/10 text-emerald-400 p-2 rounded-xl border border-emerald-500/20">🛠️</span>
+                        <h1 class="text-3xl font-bold tracking-tight text-white">Luk's <span class="text-emerald-400">Stock Manager</span></h1>
+                    </div>
+                    <p class="text-xs text-[#a8a8b3] mt-2 ml-1">Sistema Inteligente de Gestión y Control de Componentes</p>
+                </div>
+                <div class="flex items-center gap-2 bg-[#121214] px-4 py-2 rounded-xl border border-[#29292e] self-start sm:self-auto">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span class="text-xs font-medium text-[#e1e1e6]">Modo Local Activo</span>
+                </div>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <div class="lg:col-span-2 space-y-6">
+                
+                <section class="bg-[#202024] p-5 rounded-xl border border-[#29292e]">
+                    <h2 class="text-sm font-medium text-emerald-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <span>✨</span> Asistente de Carga Rápida IA
+                    </h2>
+                    <p class="text-xs text-[#a8a8b3] mb-3">¿Recibiste los materiales mezclados? Pega el texto desordenado aquí abajo (Próximamente conectado a Gemini).</p>
+                    <div class="flex gap-2">
+                        <input type="text" id="ia-input" placeholder="Ej: Llegaron 5 bujías código AX4 proveedor RepuestosSur..." class="w-full bg-[#121214] border border-[#29292e] rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 transition-colors">
+                        <button id="btn-ia" class="bg-emerald-600 hover:bg-emerald-500 text-[#121214] font-medium text-sm px-5 py-3 rounded-lg transition-colors shrink-0">
+                            Procesar
+                        </button>
+                    </div>
+                </section>
+
+                <section class="bg-[#202024] p-6 rounded-xl border border-[#29292e]">
+                    <h2 class="text-lg font-medium mb-4">Nuevo Ingreso de Material</h2>
+                    
+                    <form id="inventory-form" class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs text-[#a8a8b3] font-medium mb-1.5">Fecha</label>
+                                <input type="date" id="fecha" required class="w-full bg-[#121214] border border-[#29292e] rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500 text-white">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-[#a8a8b3] font-medium mb-1.5">Cantidad</label>
+                                <input type="number" id="cantidad" placeholder="0" min="1" required class="w-full bg-[#121214] border border-[#29292e] rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs text-[#a8a8b3] font-medium mb-1.5">Descripción / Nombre del Item</label>
+                            <input type="text" id="descripcion" required placeholder="Ej: Correa de distribución, Alambre de fardo..." class="w-full bg-[#121214] border border-[#29292e] rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500">
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs text-[#a8a8b3] font-medium mb-1.5">Código 1 (Nro Parte / Fábrica)</label>
+                                <input type="text" id="codigo1" placeholder="Ej: OEM-9832" class="w-full bg-[#121214] border border-[#29292e] rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-[#a8a8b3] font-medium mb-1.5">Código 2 (Interno / Barra)</label>
+                                <input type="text" id="codigo2" placeholder="Ej: TALLER-04" class="w-full bg-[#121214] border border-[#29292e] rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs text-[#a8a8b3] font-medium mb-1.5">Proveedor</label>
+                            <input type="text" id="proveedor" placeholder="Nombre del distribuidor o negocio" class="w-full bg-[#121214] border border-[#29292e] rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs text-[#a8a8b3] font-medium mb-1.5">Observaciones</label>
+                            <textarea id="observaciones" rows="2" placeholder="Detalles sobre el estado, ubicación en estante..." class="w-full bg-[#121214] border border-[#29292e] rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500 resize-none"></textarea>
+                        </div>
+
+                        <div id="dynamic-fields" class="space-y-3 pt-2"></div>
+
+                        <div class="flex flex-col sm:flex-row gap-3 pt-2">
+                            <button type="button" id="btn-add-field" class="border border-[#29292e] hover:bg-[#29292e] text-[#a8a8b3] hover:text-white font-medium text-xs px-4 py-2.5 rounded-lg transition-colors flex items-center justify-center gap-1.5">
+                                <span>+</span> Agregar Dato Adicional
+                            </button>
+                            <button type="submit" class="sm:ml-auto w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 text-[#121214] font-semibold text-sm px-6 py-2.5 rounded-lg transition-colors shadow-lg shadow-emerald-900/20">
+                                Guardar en Inventario
+                            </button>
+                        </div>
+                    </form>
+                </section>
+            </div>
+
+            <div class="lg:col-span-1">
+                <section class="bg-[#202024] p-5 rounded-xl border border-[#29292e] flex flex-col h-full max-h-[750px]">
+                    <div class="mb-4">
+                        <h2 class="text-lg font-medium mb-1">Items Registrados</h2>
+                        <p class="text-xs text-[#a8a8b3]">Lista en tiempo real de lo que hay en el taller.</p>
+                    </div>
+
+                    <div class="relative mb-4">
+                        <input type="text" id="search-input" placeholder="Buscar por código, ítem o proveedor..." class="w-full bg-[#121214] border border-[#29292e] rounded-lg pl-9 pr-4 py-2 text-xs focus:outline-none focus:border-emerald-500">
+                        <span class="absolute left-3 top-2.5 text-[#7c7c8a] text-xs">🔍</span>
+                    </div>
+
+                    <div id="inventory-list" class="space-y-3 overflow-y-auto pr-1 flex-1 custom-scrollbar">
+                        </div>
+                </section>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
