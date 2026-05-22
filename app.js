@@ -229,6 +229,52 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+// 9. Función de Dictado por Voz (Speech to Text) Nativo
+    const btnMicrofono = document.getElementById('btn-microfono');
+    const inputIA = document.getElementById('ia-input');
+
+    // Verificar si el navegador del celular o PC soporta reconocimiento de voz
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (SpeechRecognition && btnMicrofono && inputIA) {
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'es-AR'; // Configurado para español de Argentina
+        recognition.continuous = false; // Termina de escuchar cuando haces una pausa larga
+        recognition.interimResults = false; // Solo devuelve el resultado final pulido
+
+        // Cuando el usuario toca el micrófono
+        btnMicrofono.addEventListener('click', () => {
+            try {
+                recognition.start();
+                btnMicrofono.innerText = '🛑'; // Cambia el ícono a stop mientras escucha
+                btnMicrofono.classList.add('border-red-500', 'text-red-500');
+                inputIA.placeholder = "Escuchando... Hablá ahora...";
+            } catch (error) {
+                console.log("El reconocimiento ya estaba activo.");
+            }
+        });
+
+        // Cuando la IA termina de procesar lo que hablaste
+        recognition.onresult = (event) => {
+            const textoDictado = event.results[0][0].transcript;
+            inputIA.value = textoDictado; // Estampamos tu voz en la caja de texto
+        };
+
+        // Al apagar el micrófono (ya sea por error, pausa o éxito)
+        recognition.onend = () => {
+            btnMicrofono.innerText = '🎙️'; // Restauramos el botón original
+            btnMicrofono.classList.remove('border-red-500', 'text-red-500');
+            inputIA.placeholder = "Ej: Llegaron 5 bujías código AX4 proveedor RepuestosSur...";
+        };
+
+        recognition.onerror = (event) => {
+            console.error("Error en el reconocimiento de voz: ", event.error);
+            alert("No se pudo procesar el audio. Asegurate de dar permisos de micrófono.");
+        };
+    } else if (btnMicrofono) {
+        // Ocultar o avisar si abren la app en un navegador viejo que no tiene micrófono
+        btnMicrofono.title = "Tu navegador no soporta dictado por voz.";
+    }
 // 7. Registro de Service Worker para hacer la App Instalable
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
