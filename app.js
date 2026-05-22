@@ -1,51 +1,77 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Referencias de elementos del DOM
-    const form = document.getElementById('inventory-form');
-    const inventoryList = document.getElementById('inventory-list');
-    const searchInput = document.getElementById('search-input');
-    const btnAddField = document.getElementById('btn-add-field');
-    const dynamicFieldsContainer = document.getElementById('dynamic-fields');
-    const fechaInput = document.getElementById('fecha');
-
-    // Cargar inventario inicial desde localStorage
+    // =========================================================================
+    // 1. ESTRUCTURA BASE Y PERSISTENCIA DE DATOS (LOCALSTORAGE)
+    // =========================================================================
     let inventario = JSON.parse(localStorage.getItem('taller_inventario')) || [];
+    
+    const form = document.getElementById('inventory-form');
+    const fechaInput = document.getElementById('fecha');
+    const dynamicFieldsContainer = document.getElementById('dynamic-fields');
+    const btnAddField = document.getElementById('btn-add-field');
 
-    // 1. Establecer la fecha de hoy por defecto
+    // Autocompletar la fecha de hoy por defecto
     if (fechaInput) {
         fechaInput.value = new Date().toISOString().split('T')[0];
     }
 
-    // 2. Agregar campos personalizados dinámicos
-    btnAddField.addEventListener('click', () => {
-        const fieldId = 'extra-' + Date.now();
-        const fieldWrapper = document.createElement('div');
-        fieldWrapper.className = 'flex gap-2 items-center dynamic-field-row';
-        fieldWrapper.id = fieldId;
-
-        fieldWrapper.innerHTML = `
-            <input type="text" placeholder="Dato (Ej: Estante)" class="w-1/3 bg-[#121214] border border-[#29292e] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-emerald-500 text-emerald-400 font-medium field-key">
-            <input type="text" placeholder="Valor" class="w-2/3 bg-[#121214] border border-[#29292e] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-emerald-500 field-value">
-            <button type="button" onclick="document.getElementById('${fieldId}').remove()" class="text-[#7c7c8a] hover:text-red-400 p-2 text-sm transition-colors">✕</button>
-        `;
-        dynamicFieldsContainer.appendChild(fieldWrapper);
-    });
-
-    // Variables de control de estado para el ordenamiento de la planilla
-    let ordenFechaAsc = false;
-    let ordenCodigo1Asc = true;
-    let idUltimoItemCreado = null; // Para saber qué fila animar al guardar
+    // Guardar campos dinámicos / extras agregados en el formulario
+    let extrasCount = 0;
+    if (btnAddField && dynamicFieldsContainer) {
+        btnAddField.addEventListener('click', () => {
+            extrasCount++;
+            const fieldId = `extra-${extrasCount}`;
+            
+            const div = document.createElement('div');
+            div.className = "flex gap-2 items-center animate-fade-in-down";
+            div.id = `container-${fieldId}`;
+            
+            div.innerHTML = `
+                <input type="text" placeholder="Nombre del dato (Ej: Estante)" class="w-1/3 bg-[#121214] border border-[#29292e] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500" data-extra-key="${fieldId}">
+                <input type="text" placeholder="Valor" class="w-2/3 bg-[#121214] border border-[#29292e] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500" data-extra-value="${fieldId}">
+                <button type="button" class="text-red-400 hover:text-red-300 text-xs px-2" onclick="document.getElementById('container-${fieldId}').remove()">✕</button>
+            `;
+            dynamicFieldsContainer.appendChild(div);
+        });
+    }
 
     // =========================================================================
-    // PROPUESTA 1: EFECTOS DE ENFOQUE (FOCUS) EN LAS TARJETAS DEL FORMULARIO
+    // 2. CONTROL DE ACCESO COMERCIAL (CÓDIGO DE ACTIVACIÓN)
+    // =========================================================================
+    const CODIGO_ACTIVACION_VALIDO = "TALLER-LUKS-2026"; 
+
+    function verificarAcceso() {
+        let estadoAcceso = localStorage.getItem('luks_app_activada');
+
+        if (estadoAcceso !== 'true') {
+            if (form) form.style.opacity = "0.1";
+            
+            setTimeout(() => {
+                let codigoUsuario = prompt("🔑 ¡Bienvenido a Luk's Stock Manager!\n\nPara activar el uso de la aplicación en este dispositivo, ingresa tu código de activación o comunícate con soporte:");
+                
+                if (codigoUsuario === CODIGO_ACTIVACION_VALIDO) {
+                    localStorage.setItem('luks_app_activada', 'true');
+                    alert("✅ ¡Aplicación activada con éxito en este dispositivo!");
+                    window.location.reload();
+                } else {
+                    alert("❌ Código incorrecto. La aplicación permanecerá bloqueada.");
+                    if (form) {
+                        form.addEventListener('submit', (e) => e.preventDefault(), true);
+                    }
+                }
+            }, 500);
+        }
+    }
+    verificarAcceso();
+
+    // =========================================================================
+    // 3. EFECTOS DE ENFOQUE (FOCUS) EN LAS TARJETAS DEL FORMULARIO
     // =========================================================================
     const inputsFormulario = document.querySelectorAll('#inventory-form input, #inventory-form textarea, #ia-input');
     inputsFormulario.forEach(input => {
-        // Al hacer foco en un casillero, iluminamos su tarjeta contenedora con resplando esmeralda
         input.addEventListener('focus', (e) => {
             const seccionContenedora = e.target.closest('section') || e.target.closest('.bg-[#202024]');
             if (seccionContenedora) seccionContenedora.classList.add('seccion-enfocada');
         });
-        // Al salir del casillero, removemos el brillo
         input.addEventListener('blur', (e) => {
             const seccionContenedora = e.target.closest('section') || e.target.closest('.bg-[#202024]');
             if (seccionContenedora) seccionContenedora.classList.remove('seccion-enfocada');
@@ -53,8 +79,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // =========================================================================
-    // MOTOR DE RENDIMIENTO: TABLA CLÁSICA CON MULTI-FILTROS Y ANIMACIÓN
+    // 4. MOTOR DE RENDIMIENTO: TABLA CLÁSICA CON MULTI-FILTROS Y ANIMACIÓN
     // =========================================================================
+    let ordenFechaAsc = false;
+    let ordenCodigo1Asc = true;
+    let idUltimoItemCreado = null; 
+
     function renderInventario(datosParaMostrar = inventario) {
         const cuerpoTabla = document.getElementById('inventario-cuerpo');
         if (!cuerpoTabla) return;
@@ -75,7 +105,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const fila = document.createElement('tr');
             fila.className = "hover:bg-[#29292e] transition-colors group";
             
-            // Si es el elemento recién guardado, le disparamos la animación de caída suave
             if (item.id === idUltimoItemCreado) {
                 fila.classList.add('animar-fila-nueva');
             }
@@ -93,7 +122,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 etiquetaCategoria = `<span class="bg-amber-900/40 text-amber-400 border border-amber-500/30 text-[10px] px-1.5 py-0.5 rounded font-medium ml-2 whitespace-nowrap">📦 Repuesto</span>`;
             }
 
-            // Unir campos dinámicos adicionales si existen en el campo de proveedor/observaciones
             let detallesExtras = '';
             if (item.extras && Object.keys(item.extras).length > 0) {
                 detallesExtras = Object.entries(item.extras)
@@ -131,20 +159,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Función de filtrado dinámico simultáneo en las celdas
     function aplicarFiltrosCruzados() {
-        const valFecha = document.getElementById('filtro-fecha').value.toLowerCase();
-        const valDesc = document.getElementById('filtro-descripcion').value.toLowerCase();
-        const valCod1 = document.getElementById('filtro-codigo1').value.toLowerCase();
-        const valProv = document.getElementById('filtro-proveedor').value.toLowerCase();
+        const valFecha = document.getElementById('filtro-fecha')?.value.toLowerCase() || '';
+        const valDesc = document.getElementById('filtro-descripcion')?.value.toLowerCase() || '';
+        const valCod1 = document.getElementById('filtro-codigo1')?.value.toLowerCase() || '';
+        const valProv = document.getElementById('filtro-proveedor')?.value.toLowerCase() || '';
 
         const filtrados = inventario.filter(item => {
             const matchFecha = (item.fecha || '').toLowerCase().includes(valFecha);
             const matchDesc = (item.descripcion || '').toLowerCase().includes(valDesc);
             const matchCod1 = (item.codigo1 || '').toLowerCase().includes(valCod1);
             const matchProv = (item.proveedor || '').toLowerCase().includes(valProv);
-            
             return matchFecha && matchDesc && matchCod1 && matchProv;
         });
-
         renderInventario(filtrados);
     }
 
@@ -154,7 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('filtro-codigo1')?.addEventListener('input', aplicarFiltrosCruzados);
     document.getElementById('filtro-proveedor')?.addEventListener('input', aplicarFiltrosCruzados);
 
-    // Ordenamiento por Clic: De más reciente a más antiguo (y viceversa)
+    // Ordenamiento por Clic en los encabezados
     document.getElementById('th-fecha')?.addEventListener('click', () => {
         ordenFechaAsc = !ordenFechaAsc;
         inventario.sort((a, b) => {
@@ -165,7 +191,6 @@ document.addEventListener('DOMContentLoaded', () => {
         aplicarFiltrosCruzados();
     });
 
-    // Ordenamiento por Clic: Alfabético por Código 1
     document.getElementById('th-codigo1')?.addEventListener('click', () => {
         ordenCodigo1Asc = !ordenCodigo1Asc;
         inventario.sort((a, b) => {
@@ -178,78 +203,57 @@ document.addEventListener('DOMContentLoaded', () => {
         aplicarFiltrosCruzados();
     });
 
-    // Interceptar el envío del formulario para capturar la animación antes del reset
-    const formularioOriginal = document.getElementById('inventory-form');
-    if (formularioOriginal) {
-        formularioOriginal.addEventListener('submit', () => {
-            // Buscamos el ítem que se acaba de insertar en el array local
-            if (inventario.length > 0) {
-                const ultimoItem = inventario[inventario.length - 1];
-                idUltimoItemCreado = ultimoItem.id;
-            }
-            // Apagamos el estado de animación después de 3 segundos
+    // =========================================================================
+    // 5. EVENTO DE ENVÍO Y GUARDADO DEL FORMULARIO DE INGRESO
+    // =========================================================================
+    if (form) {
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            // Recopilar los campos adicionales / extras
+            const extras = {};
+            const keys = document.querySelectorAll('[data-extra-key]');
+            keys.forEach(keyInput => {
+                const id = keyInput.getAttribute('data-extra-key');
+                const valInput = document.querySelector(`[data-extra-value="${id}"]`);
+                const clave = keyInput.value.trim();
+                const valor = valInput ? valInput.value.trim() : '';
+                if (clave) extras[clave] = valor;
+            });
+
+            const nuevoItem = {
+                id: Date.now(),
+                fecha: document.getElementById('fecha').value,
+                cantidad: document.getElementById('cantidad').value,
+                descripcion: document.getElementById('descripcion').value.trim(),
+                codigo1: document.getElementById('codigo1').value.trim(),
+                codigo2: document.getElementById('codigo2').value.trim(),
+                proveedor: document.getElementById('proveedor').value.trim(),
+                observaciones: document.getElementById('observaciones').value.trim(),
+                extras: extras
+            };
+
+            inventario.push(nuevoItem);
+            localStorage.setItem('taller_inventario', JSON.stringify(inventario));
+            
+            idUltimoItemCreado = nuevoItem.id; // Activar animación
+
+            // Resetear formulario y restaurar valores base
+            form.reset();
+            if (fechaInput) fechaInput.value = new Date().toISOString().split('T')[0];
+            if (dynamicFieldsContainer) dynamicFieldsContainer.innerHTML = '';
+
+            aplicarFiltrosCruzados();
+
             setTimeout(() => {
                 idUltimoItemCreado = null;
             }, 3000);
         });
     }
 
-    // 4. Manejar el envío del formulario (Guardar item)
-    form.addEventListener('submit', (e) => {
-        e.preventDefault();
-
-        // Recolectar datos dinámicos extras
-        const extras = [];
-        document.querySelectorAll('.dynamic-field-row').forEach(row => {
-            const clave = row.querySelector('.field-key').value.trim();
-            const valor = row.querySelector('.field-value').value.trim();
-            if (clave && valor) {
-                extras.push({ clave, valor });
-            }
-        });
-
-        // Crear el objeto del nuevo repuesto
-        const nuevoItem = {
-            id: Date.now(),
-            fecha: document.getElementById('fecha').value,
-            cantidad: document.getElementById('cantidad').value,
-            descripcion: document.getElementById('descripcion').value.trim(),
-            codigo1: document.getElementById('codigo1').value.trim(),
-            codigo2: document.getElementById('codigo2').value.trim(),
-            proveedor: document.getElementById('proveedor').value.trim(),
-            observaciones: document.getElementById('observaciones').value.trim(),
-            extras: extras
-        };
-
-        // Guardar en el arreglo y en localStorage
-        inventario.push(nuevoItem);
-        localStorage.setItem('taller_inventario', JSON.stringify(inventario));
-
-        // Reiniciar formulario y restaurar fecha/campos dinámicos
-        form.reset();
-        fechaInput.value = new Date().toISOString().split('T')[0];
-        dynamicFieldsContainer.innerHTML = '';
-
-        // Actualizar la lista en pantalla
-        renderInventario();
-    });
-
-    // 5. Buscador en tiempo real
-    searchInput.addEventListener('input', (e) => {
-        const busqueda = e.target.value.toLowerCase();
-        const filtrados = inventario.filter(item => {
-            return item.descripcion.toLowerCase().includes(busqueda) ||
-                   item.codigo1.toLowerCase().includes(busqueda) ||
-                   item.codigo2.toLowerCase().includes(busqueda) ||
-                   item.proveedor.toLowerCase().includes(busqueda);
-        });
-        renderInventario(filtrados);
-    });
-
-    // Renderizar al cargar la página por primera vez
-    renderInventario();
-
-// 6. Asistente de Carga Rápida IA con Conexión Directa a Gemini API
+    // =========================================================================
+    // 6. ASISTENTE DE CARGA RÁPIDA IA CON CONEXIÓN DIRECTA A GEMINI API
+    // =========================================================================
     const btnIa = document.getElementById('btn-ia');
     const iaInput = document.getElementById('ia-input');
 
@@ -261,22 +265,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // Solicitar la API Key de forma segura si no está guardada localmente
             let apiKey = localStorage.getItem('gemini_api_key');
             if (!apiKey) {
-                apiKey = prompt("🔐 Para activar la IA, pega tu API Key de Google AI Studio (Se guardará de forma local y segura en tu navegador):");
+                apiKey = prompt("🔐 Para activar la IA, pega tu API Key de Google AI Studio (Se guardará local y segura):");
                 if (!apiKey) {
                     alert("Se requiere la API Key para procesar el texto con Inteligencia Artificial.");
                     return;
                 }
-                localStorage.setItem('gemini_api_key', apiKey.trim()); // Asegura quitar espacios fantasmas
+                localStorage.setItem('gemini_api_key', apiKey);
             }
 
-            // Cambiar el estado del botón para mostrar que la IA está pensando
             btnIa.disabled = true;
             btnIa.innerText = 'Analizando... ⏳';
 
-            // Prompt interno robusto
             const promptInstrucciones = `Actúa como un extractor de datos experto para un taller. Analiza el siguiente texto desordenado que describe el ingreso de un material y extrae la información requerida estrictamente en este formato JSON, sin textos extras, sin bloques de código, solo el objeto JSON directo. Si un dato no existe, devuélvelo como cadena vacía "".
             Texto a analizar: "${textoDesordenado}"
             
@@ -291,7 +292,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }`;
 
             try {
-                // Llamada directa al modelo Gemini 2.5 Flash
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
                 
                 const response = await fetch(url, {
@@ -302,18 +302,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     })
                 });
 
-                if (!response.ok) throw new Error('Error de autenticación o respuesta de Google.');
+                if (!response.ok) throw new Error('Error en la respuesta de la API de Google.');
 
                 const data = await response.json();
                 let respuestaTexto = data.candidates[0].content.parts[0].text.trim();
-                
-                // Limpieza absoluta de bloques de código markdown de la IA
                 respuestaTexto = respuestaTexto.replace(/```json|```/g, '').trim();
 
-                // Parsear el resultado enviado por Gemini
                 const datosExtraidos = JSON.parse(respuestaTexto);
 
-                // Rellenar automáticamente los campos del formulario en pantalla
                 if (datosExtraidos.cantidad) document.getElementById('cantidad').value = datosExtraidos.cantidad;
                 if (datosExtraidos.descripcion) document.getElementById('descripcion').value = datosExtraidos.descripcion;
                 if (datosExtraidos.codigo1) document.getElementById('codigo1').value = datosExtraidos.codigo1;
@@ -321,69 +317,68 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (datosExtraidos.proveedor) document.getElementById('proveedor').value = datosExtraidos.proveedor;
                 if (datosExtraidos.observaciones) document.getElementById('observaciones').value = datosExtraidos.observaciones;
 
-                // Limpiar el campo de entrada de texto
                 iaInput.value = '';
                 alert('✨ ¡Campos autocompletados por el asistente de IA con éxito! Revisa los datos y presiona Guardar.');
 
             } catch (error) {
                 console.error(error);
-                // TRUCO DE TALLER: Si falla, borramos la clave de la memoria para obligar a pedirla limpia la próxima vez
-                localStorage.removeItem('gemini_api_key');
-                alert('❌ Hubo un problema al procesar el texto con la IA. La clave vieja fue eliminada por seguridad. Por favor, vuelve a presionar "Procesar" y pega tu API Key de Google AI Studio asegurándote de que esté copiada completa y sin espacios.');
+                localStorage.removeItem('gemini_api_key'); // Eliminar clave si falla para forzar re-ingreso
+                alert('❌ Hubo un problema al procesar el texto con la IA. La clave vieja fue eliminada por seguridad. Reintenta de nuevo.');
             } finally {
-                // Restaurar el botón a su estado original
                 btnIa.disabled = false;
                 btnIa.innerText = 'Procesar';
             }
         });
     }
-// 9. Función de Dictado por Voz (Speech to Text) Nativo
-    const btnMicrofono = document.getElementById('btn-microfono');
-    const inputIA = document.getElementById('ia-input');
 
-    // Verificar si el navegador del celular o PC soporta reconocimiento de voz
+    // =========================================================================
+    // 7. FUNCIÓN DE DICTADO POR VOZ (SPEECH TO TEXT) NATIVO
+    // =========================================================================
+    const btnMicrofono = document.getElementById('btn-microfono');
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-    if (SpeechRecognition && btnMicrofono && inputIA) {
+    if (SpeechRecognition && btnMicrofono && iaInput) {
         const recognition = new SpeechRecognition();
-        recognition.lang = 'es-AR'; // Configurado para español de Argentina
-        recognition.continuous = false; // Termina de escuchar cuando haces una pausa larga
-        recognition.interimResults = false; // Solo devuelve el resultado final pulido
+        recognition.lang = 'es-AR';
+        recognition.continuous = false;
+        recognition.interimResults = false;
 
-        // Cuando el usuario toca el micrófono
         btnMicrofono.addEventListener('click', () => {
             try {
                 recognition.start();
-                btnMicrofono.innerText = '🛑'; // Cambia el ícono a stop mientras escucha
+                btnMicrofono.innerText = '🛑';
                 btnMicrofono.classList.add('border-red-500', 'text-red-500');
-                inputIA.placeholder = "Escuchando... Hablá ahora...";
+                iaInput.placeholder = "Escuchando... Hablá ahora...";
             } catch (error) {
                 console.log("El reconocimiento ya estaba activo.");
             }
         });
 
-        // Cuando la IA termina de procesar lo que hablaste
         recognition.onresult = (event) => {
             const textoDictado = event.results[0][0].transcript;
-            inputIA.value = textoDictado; // Estampamos tu voz en la caja de texto
+            iaInput.value = textoDictado;
         };
 
-        // Al apagar el micrófono (ya sea por error, pausa o éxito)
         recognition.onend = () => {
-            btnMicrofono.innerText = '🎙️'; // Restauramos el botón original
+            btnMicrofono.innerText = '🎙️';
             btnMicrofono.classList.remove('border-red-500', 'text-red-500');
-            inputIA.placeholder = "Ej: Llegaron 5 bujías código AX4 proveedor RepuestosSur...";
+            iaInput.placeholder = "Ej: Llegaron 5 bujías código AX4 proveedor RepuestosSur...";
         };
 
         recognition.onerror = (event) => {
             console.error("Error en el reconocimiento de voz: ", event.error);
-            alert("No se pudo procesar el audio. Asegurate de dar permisos de micrófono.");
+            alert("No se pudo procesar el audio. Asegurate de otorgar permisos de micrófono.");
         };
     } else if (btnMicrofono) {
-        // Ocultar o avisar si abren la app en un navegador viejo que no tiene micrófono
         btnMicrofono.title = "Tu navegador no soporta dictado por voz.";
     }
-// 7. Registro de Service Worker para hacer la App Instalable
+
+    // Cargar la planilla con la base de datos inicial de localStorage
+    renderInventario();
+
+    // =========================================================================
+    // 8. REGISTRO DEL SERVICE WORKER PARA ACTIVAR PWA INSTALABLE
+    // =========================================================================
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
             navigator.serviceWorker.register('./sw.js')
@@ -391,40 +386,4 @@ document.addEventListener('DOMContentLoaded', () => {
                 .catch(err => console.error('PWA: Error al activar instalacion', err));
         });
     }
-// 8. Control de Acceso Comercial: Validación por Código de Activación
-    const formularioPrincipal = document.getElementById('inventory-form');
-    
-    // DEFINÍ ACÁ TU CONTRASEÑA MAESTRA (La que le vas a dar a tus conocidos)
-    const CODIGO_ACTIVACION_VALIDO = "TALLER-LUKS-2026"; 
-
-    function verificarAcceso() {
-        let estadoAcceso = localStorage.getItem('luks_app_activada');
-
-        if (estadoAcceso !== 'true') {
-            // Si no está activada, bloqueamos visualmente el formulario y el asistente
-            if (formularioPrincipal) formularioPrincipal.style.opacity = "0.2";
-            if (dynamicFieldsContainer) dynamicFieldsContainer.style.pointerEvents = "none";
-            
-            // Pedimos el código al usuario de forma elegante
-            setTimeout(() => {
-                let codigoUsuario = prompt("🔑 ¡Bienvenido a Luk's Stock Manager!\n\nPara activar el uso de la aplicación en este dispositivo, ingresa tu código de activación o comunícate con soporte:");
-                
-                if (codigoUsuario === CODIGO_ACTIVACION_VALIDO) {
-                    localStorage.setItem('luks_app_activada', 'true');
-                    alert("✅ ¡Aplicación activada con éxito en este dispositivo! Ya puedes operar.");
-                    window.location.reload(); // Recargamos para desbloquear todo limpio
-                } else {
-                    alert("❌ Código incorrecto o inválido. La aplicación permanecerá bloqueada.");
-                    // Forzamos el bloqueo estricto si cancela o se equivoca
-                    if (formularioPrincipal) {
-                        formularioPrincipal.addEventListener('submit', (e) => e.preventDefault(), true);
-                    }
-                }
-            }, 500);
-        }
-    }
-
-    // Ejecutamos la verificación apenas abre la aplicación
-    verificarAcceso();
-
-}); // <-- Cierre del archivo
+});
