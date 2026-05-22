@@ -145,84 +145,87 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnIa = document.getElementById('btn-ia');
     const iaInput = document.getElementById('ia-input');
 
-    btnIa.addEventListener('click', async () => {
-        const textoDesordenado = iaInput.value.trim();
-        if (!textoDesordenado) {
-            alert('Por favor, ingresa un texto desordenado para procesar.');
-            return;
-        }
-
-        // Solicitar la API Key de forma segura si no está guardada localmente
-        let apiKey = localStorage.getItem('gemini_api_key');
-        if (!apiKey) {
-            apiKey = prompt("🔐 Para activar la IA, pega tu API Key de Google AI Studio (Se guardará de forma local y segura en tu navegador):");
-            if (!apiKey) {
-                alert("Se requiere la API Key para procesar el texto con Inteligencia Artificial.");
+    if (btnIa && iaInput) {
+        btnIa.addEventListener('click', async () => {
+            const textoDesordenado = iaInput.value.trim();
+            if (!textoDesordenado) {
+                alert('Por favor, ingresa un texto desordenado para procesar.');
                 return;
             }
-            localStorage.setItem('gemini_api_key', apiKey);
-        }
 
-        // Cambiar el estado del botón para mostrar que la IA está pensando
-        btnIa.disabled = true;
-        btnIa.innerText = 'Analizando... ⏳';
+            // Solicitar la API Key de forma segura si no está guardada localmente
+            let apiKey = localStorage.getItem('gemini_api_key');
+            if (!apiKey) {
+                apiKey = prompt("🔐 Para activar la IA, pega tu API Key de Google AI Studio (Se guardará de forma local y segura en tu navegador):");
+                if (!apiKey) {
+                    alert("Se requiere la API Key para procesar el texto con Inteligencia Artificial.");
+                    return;
+                }
+                localStorage.setItem('gemini_api_key', apiKey);
+            }
 
-        // Prompt interno para obligar a Gemini a devolver exclusivamente un objeto JSON limpio
-        const promptInstrucciones = `Actúa como un extractor de datos experto para un taller. Analiza el siguiente texto desordenado que describe el ingreso de un material y extrae la información requerida estrictamente en este formato JSON, sin textos extras, sin bloques de código, solo el objeto JSON directo. Si un dato no existe, devuélvelo como cadena vacía "".
-        Texto a analizar: "${textoDesordenado}"
-        
-        Formato requerido:
-        {
-            "cantidad": "solo el número",
-            "descripcion": "nombre o descripción del ítem",
-            "codigo1": "código de fábrica o nro parte si aplica",
-            "codigo2": "código interno si aplica",
-            "proveedor": "nombre del proveedor",
-            "observaciones": "notas o estado del material"
-        }`;
+            // Cambiar el estado del botón para mostrar que la IA está pensando
+            btnIa.disabled = true;
+            btnIa.innerText = 'Analizando... ⏳';
 
-        try {
-            // Llamada directa al modelo Gemini 2.5 Flash (optimizado para velocidad y tareas rápidas)
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+            // Prompt interno para obligar a Gemini a devolver exclusivamente un objeto JSON limpio
+            const promptInstrucciones = `Actúa como un extractor de datos experto para un taller. Analiza el siguiente texto desordenado que describe el ingreso de un material y extrae la información requerida estrictamente en este formato JSON, sin textos extras, sin bloques de código, solo el objeto JSON directo. Si un dato no existe, devuélvelo como cadena vacía "".
+            Texto a analizar: "${textoDesordenado}"
             
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: promptInstrucciones }] }]
-                })
-            });
+            Formato requerido:
+            {
+                "cantidad": "solo el número",
+                "descripcion": "nombre o descripción del ítem",
+                "codigo1": "código de fábrica o nro parte si aplica",
+                "codigo2": "código interno si aplica",
+                "proveedor": "nombre del proveedor",
+                "observaciones": "notas o estado del material"
+            }`;
 
-            if (!response.ok) throw new Error('Error en la respuesta de la API de Google.');
+            try {
+                // Llamada directa al modelo Gemini 2.5 Flash
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: promptInstrucciones }] }]
+                    })
+                });
 
-            const data = await response.json();
-            let respuestaTexto = data.candidates[0].content.parts[0].text.trim();
-            
-            // Limpiar posibles formatos de bloque de código markdown que a veces la IA agrega por error
-            respuestaTexto = respuestaTexto.replace(/```json|```/g, '').trim();
+                if (!response.ok) throw new Error('Error en la respuesta de la API de Google.');
 
-            // Parsear el resultado enviado por Gemini
-            const datosExtraidos = JSON.parse(respuestaTexto);
+                const data = await response.json();
+                let respuestaTexto = data.candidates[0].content.parts[0].text.trim();
+                
+                // Limpiar posibles formatos de bloque de código markdown que a veces la IA agrega por error
+                respuestaTexto = respuestaTexto.replace(/```json|```/g, '').trim();
 
-            // Rellenar automáticamente los campos del formulario en pantalla
-            if (datosExtraidos.cantidad) document.getElementById('cantidad').value = datosExtraidos.cantidad;
-            if (datosExtraidos.descripcion) document.getElementById('descripcion').value = datosExtraidos.descripcion;
-            if (datosExtraidos.codigo1) document.getElementById('codigo1').value = datosExtraidos.codigo1;
-            if (datosExtraidos.codigo2) document.getElementById('codigo2').value = datosExtraidos.codigo2;
-            if (datosExtraidos.proveedor) document.getElementById('proveedor').value = datosExtraidos.proveedor;
-            if (datosExtraidos.observaciones) document.getElementById('observaciones').value = datosExtraidos.observaciones;
+                // Parsear el resultado enviado por Gemini
+                const datosExtraidos = JSON.parse(respuestaTexto);
 
-            // Limpiar el campo de entrada de texto
-            iaInput.value = '';
-            alert('✨ ¡Campos autocompletados por el asistente de IA con éxito! Revisa los datos y presiona Guardar.');
+                // Rellenar automáticamente los campos del formulario en pantalla
+                if (datosExtraidos.cantidad) document.getElementById('cantidad').value = datosExtraidos.cantidad;
+                if (datosExtraidos.descripcion) document.getElementById('descripcion').value = datosExtraidos.descripcion;
+                if (datosExtraidos.codigo1) document.getElementById('codigo1').value = datosExtraidos.codigo1;
+                if (datosExtraidos.codigo2) document.getElementById('codigo2').value = datosExtraidos.codigo2;
+                if (datosExtraidos.proveedor) document.getElementById('proveedor').value = datosExtraidos.proveedor;
+                if (datosExtraidos.observaciones) document.getElementById('observaciones').value = datosExtraidos.observaciones;
 
-        } catch (error) {
-            console.error(error);
-            alert('❌ Hubo un problema al procesar el texto con la IA. Si cambiaste de API Key, puedes borrar los datos del navegador e intentar de nuevo.');
-        } finally {
-            // Restaurar el botón a su estado original
-            btnIa.disabled = false;
-            btnIa.innerText = 'Procesar';
-        }
+                // Limpiar el campo de entrada de texto
+                iaInput.value = '';
+                alert('✨ ¡Campos autocompletados por el asistente de IA con éxito! Revisa los datos y presiona Guardar.');
+
+            } catch (error) {
+                console.error(error);
+                alert('❌ Hubo un problema al procesar el texto con la IA. Si la clave es errónea, limpia los datos de navegación del sitio.');
+            } finally {
+                // Restaurar el botón a su estado original
+                btnIa.disabled = false;
+                btnIa.innerText = 'Procesar';
+            }
+        });
+    }
 
 });
