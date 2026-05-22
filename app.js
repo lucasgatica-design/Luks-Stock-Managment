@@ -237,5 +237,40 @@ document.addEventListener('DOMContentLoaded', () => {
                 .catch(err => console.error('PWA: Error al activar instalacion', err));
         });
     }
+// 8. Control de Acceso Comercial: Validación por Código de Activación
+    const formularioPrincipal = document.getElementById('inventory-form');
+    
+    // DEFINÍ ACÁ TU CONTRASEÑA MAESTRA (La que le vas a dar a tus conocidos)
+    const CODIGO_ACTIVACION_VALIDO = "TALLER-LUKS-2026"; 
+
+    function verificarAcceso() {
+        let estadoAcceso = localStorage.getItem('luks_app_activada');
+
+        if (estadoAcceso !== 'true') {
+            // Si no está activada, bloqueamos visualmente el formulario y el asistente
+            if (formularioPrincipal) formularioPrincipal.style.opacity = "0.2";
+            if (dynamicFieldsContainer) dynamicFieldsContainer.style.pointerEvents = "none";
+            
+            // Pedimos el código al usuario de forma elegante
+            setTimeout(() => {
+                let codigoUsuario = prompt("🔑 ¡Bienvenido a Luk's Stock Manager!\n\nPara activar el uso de la aplicación en este dispositivo, ingresa tu código de activación o comunícate con soporte:");
+                
+                if (codigoUsuario === CODIGO_ACTIVACION_VALIDO) {
+                    localStorage.setItem('luks_app_activada', 'true');
+                    alert("✅ ¡Aplicación activada con éxito en este dispositivo! Ya puedes operar.");
+                    window.location.reload(); // Recargamos para desbloquear todo limpio
+                } else {
+                    alert("❌ Código incorrecto o inválido. La aplicación permanecerá bloqueada.");
+                    // Forzamos el bloqueo estricto si cancela o se equivoca
+                    if (formularioPrincipal) {
+                        formularioPrincipal.addEventListener('submit', (e) => e.preventDefault(), true);
+                    }
+                }
+            }, 500);
+        }
+    }
+
+    // Ejecutamos la verificación apenas abre la aplicación
+    verificarAcceso();
 
 }); // <-- Cierre del archivo
