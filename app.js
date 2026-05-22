@@ -229,5 +229,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+// 7. Registro de Service Worker para hacer la App Instalable
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+                .then(reg => console.log('PWA: Motor de instalacion activo', reg))
+                .catch(err => console.error('PWA: Error al activar instalacion', err));
+        });
+    }
 
 }); // <-- Cierre del archivo

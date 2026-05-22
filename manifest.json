@@ -1,0 +1,16 @@
+{
+  "short_name": "LuksStock",
+  "name": "Luk's Stock Manager",
+  "start_url": "./index.html",
+  "background_color": "#121214",
+  "theme_color": "#10b981",
+  "display": "standalone",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3252/3252968.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ]
+}
