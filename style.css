@@ -20,3 +20,26 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: #04d361;
 }
+/* Efecto de Enfoque con Brillo para las Secciones del Formulario */
+.seccion-enfocada {
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.15) !important;
+    border-color: rgba(16, 185, 129, 0.4) !important;
+    transition: all 0.3s ease;
+}
+
+/* Animación para el Ingreso Suave de Filas en la Tabla */
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animar-fila-nueva {
+    animation: fadeInDown 0.4s ease-out forwards;
+    background-color: rgba(16, 185, 129, 0.05); /* Destello verde sutil al aparecer */
+}

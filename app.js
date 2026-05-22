@@ -30,59 +30,167 @@ document.addEventListener('DOMContentLoaded', () => {
         dynamicFieldsContainer.appendChild(fieldWrapper);
     });
 
-    // 3. Función para renderizar la lista en pantalla
-    function renderInventario(itemsFiltrados = inventario) {
-        inventoryList.innerHTML = '';
+    // Variables de control de estado para el ordenamiento de la planilla
+    let ordenFechaAsc = false;
+    let ordenCodigo1Asc = true;
+    let idUltimoItemCreado = null; // Para saber qué fila animar al guardar
 
-        if (itemsFiltrados.length === 0) {
-            inventoryList.innerHTML = `
-                <div class="text-center py-8 text-[#7c7c8a] text-xs border border-dashed border-[#29292e] rounded-lg">
-                    No se encontraron ítems.
-                </div>`;
+    // =========================================================================
+    // PROPUESTA 1: EFECTOS DE ENFOQUE (FOCUS) EN LAS TARJETAS DEL FORMULARIO
+    // =========================================================================
+    const inputsFormulario = document.querySelectorAll('#inventory-form input, #inventory-form textarea, #ia-input');
+    inputsFormulario.forEach(input => {
+        // Al hacer foco en un casillero, iluminamos su tarjeta contenedora con resplando esmeralda
+        input.addEventListener('focus', (e) => {
+            const seccionContenedora = e.target.closest('section') || e.target.closest('.bg-[#202024]');
+            if (seccionContenedora) seccionContenedora.classList.add('seccion-enfocada');
+        });
+        // Al salir del casillero, removemos el brillo
+        input.addEventListener('blur', (e) => {
+            const seccionContenedora = e.target.closest('section') || e.target.closest('.bg-[#202024]');
+            if (seccionContenedora) seccionContenedora.classList.remove('seccion-enfocada');
+        });
+    });
+
+    // =========================================================================
+    // MOTOR DE RENDIMIENTO: TABLA CLÁSICA CON MULTI-FILTROS Y ANIMACIÓN
+    // =========================================================================
+    function renderInventario(datosParaMostrar = inventario) {
+        const cuerpoTabla = document.getElementById('inventario-cuerpo');
+        if (!cuerpoTabla) return;
+
+        cuerpoTabla.innerHTML = '';
+
+        if (datosParaMostrar.length === 0) {
+            cuerpoTabla.innerHTML = `
+                <tr>
+                    <td colspan="7" class="px-3 py-6 text-center text-[#a8a8b3] italic">
+                        No se encontraron registros en la planilla con los filtros aplicados.
+                    </td>
+                </tr>`;
             return;
         }
 
-        // Mostrar primero los más recientes
-        [...itemsFiltrados].reverse().forEach((item) => {
-            const card = document.createElement('div');
-            card.className = 'bg-[#121214] p-4 rounded-xl border border-[#29292e] relative group hover:border-[#3a3a42] transition-all';
+        datosParaMostrar.forEach((item) => {
+            const fila = document.createElement('tr');
+            fila.className = "hover:bg-[#29292e] transition-colors group";
             
-            // Renderizar campos extra si existen
-            let extraHTML = '';
-            if (item.extras && item.extras.length > 0) {
-                extraHTML = `<div class="mt-2 pt-2 border-t border-[#29292e]/50 grid grid-cols-2 gap-1 text-[11px]">`;
-                item.extras.forEach(ext => {
-                    extraHTML += `<div><span class="text-[#7c7c8a]">${ext.clave}:</span> <span class="text-emerald-400">${ext.valor}</span></div>`;
-                });
-                extraHTML += `</div>`;
+            // Si es el elemento recién guardado, le disparamos la animación de caída suave
+            if (item.id === idUltimoItemCreado) {
+                fila.classList.add('animar-fila-nueva');
             }
 
-            card.innerHTML = `
-                <button class="absolute top-3 right-3 text-xs text-[#7c7c8a] hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity btn-delete" data-id="${item.id}">Eliminar</button>
-                <div class="flex justify-between items-start gap-2">
-                    <span class="bg-emerald-500/10 text-emerald-400 text-[11px] font-mono px-2 py-0.5 rounded-md">Cant: ${item.cantidad}</span>
-                    <span class="text-[10px] text-[#7c7c8a]">${item.fecha}</span>
-                </div>
-                <h3 class="text-sm font-medium text-white mt-2">${item.descripcion}</h3>
-                <div class="grid grid-cols-2 gap-x-2 gap-y-1 mt-2 text-[11px] text-[#a8a8b3]">
-                    <div><span class="text-[#7c7c8a]">Cód 1:</span> ${item.codigo1 || '-'}</div>
-                    <div><span class="text-[#7c7c8a]">Cód 2:</span> ${item.codigo2 || '-'}</div>
-                    <div class="col-span-2"><span class="text-[#7c7c8a]">Prov:</span> ${item.proveedor || '-'}</div>
-                </div>
-                ${item.observaciones ? `<p class="text-[11px] text-[#7c7c8a] italic mt-1.5 bg-[#202024] p-1.5 rounded border border-[#29292e]/40">Obs: ${item.observaciones}</p>` : ''}
-                ${extraHTML}
+            // DETECTOR AUTOMÁTICO DE CATEGORÍAS (Tags visuales)
+            let etiquetaCategoria = '';
+            const descMinuscula = (item.descripcion || '').toLowerCase();
+            
+            const palabrasHerramienta = ['pinza', 'destornillador', 'llave', 'tubo', 'martillo', 'mecha', 'pinzas', 'multimetro', 'calibre', 'soldadora'];
+            const palabrasRepuesto = ['correa', 'bujia', 'bujías', 'filtro', 'reten', 'o-ring', 'oring', 'pastilla', 'disco', 'manguera', 'amortiguador', 'bomba'];
+
+            if (palabrasHerramienta.some(p => descMinuscula.includes(p))) {
+                etiquetaCategoria = `<span class="bg-blue-900/40 text-blue-400 border border-blue-500/30 text-[10px] px-1.5 py-0.5 rounded font-medium ml-2 whitespace-nowrap">🔧 Herramienta</span>`;
+            } else if (palabrasRepuesto.some(p => descMinuscula.includes(p))) {
+                etiquetaCategoria = `<span class="bg-amber-900/40 text-amber-400 border border-amber-500/30 text-[10px] px-1.5 py-0.5 rounded font-medium ml-2 whitespace-nowrap">📦 Repuesto</span>`;
+            }
+
+            // Unir campos dinámicos adicionales si existen en el campo de proveedor/observaciones
+            let detallesExtras = '';
+            if (item.extras && Object.keys(item.extras).length > 0) {
+                detallesExtras = Object.entries(item.extras)
+                    .map(([clave, valor]) => ` | ${clave}: ${valor}`)
+                    .join('');
+            }
+
+            fila.innerHTML = `
+                <td class="px-3 py-3 font-mono text-[#a8a8b3] whitespace-nowrap">${item.fecha || '-'}</td>
+                <td class="px-3 py-3 font-semibold text-emerald-400">${item.cantidad || '0'}</td>
+                <td class="px-3 py-3 max-w-xs truncate" title="${item.descripcion}">
+                    <span class="font-medium">${item.descripcion || '-'}</span>${etiquetaCategoria}
+                </td>
+                <td class="px-3 py-3 font-mono whitespace-nowrap">${item.codigo1 || '-'}</td>
+                <td class="px-3 py-3 font-mono whitespace-nowrap">${item.codigo2 || '-'}</td>
+                <td class="px-3 py-3 text-[#a8a8b3] max-w-xs truncate" title="${item.proveedor}">${item.proveedor || '-'}${detallesExtras}</td>
+                <td class="px-3 py-3 text-center whitespace-nowrap">
+                    <button class="text-red-400 hover:text-red-300 opacity-0 group-hover:opacity-100 transition-opacity font-medium px-2 py-0.5 rounded text-[11px]" onclick="eliminarItem(${item.id})">
+                        ❌ Borrar
+                    </button>
+                </td>
             `;
-            inventoryList.appendChild(card);
+            cuerpoTabla.appendChild(fila);
+        });
+    }
+
+    // Mecanismo de borrado adaptado a la planilla
+    window.eliminarItem = function(id) {
+        if(confirm("¿Estás seguro de que deseas eliminar este registro de la planilla?")) {
+            inventario = inventario.filter(item => item.id !== id);
+            localStorage.setItem('taller_inventario', JSON.stringify(inventario));
+            aplicarFiltrosCruzados();
+        }
+    };
+
+    // Función de filtrado dinámico simultáneo en las celdas
+    function aplicarFiltrosCruzados() {
+        const valFecha = document.getElementById('filtro-fecha').value.toLowerCase();
+        const valDesc = document.getElementById('filtro-descripcion').value.toLowerCase();
+        const valCod1 = document.getElementById('filtro-codigo1').value.toLowerCase();
+        const valProv = document.getElementById('filtro-proveedor').value.toLowerCase();
+
+        const filtrados = inventario.filter(item => {
+            const matchFecha = (item.fecha || '').toLowerCase().includes(valFecha);
+            const matchDesc = (item.descripcion || '').toLowerCase().includes(valDesc);
+            const matchCod1 = (item.codigo1 || '').toLowerCase().includes(valCod1);
+            const matchProv = (item.proveedor || '').toLowerCase().includes(valProv);
+            
+            return matchFecha && matchDesc && matchCod1 && matchProv;
         });
 
-        // Asignar eventos a los botones de eliminar
-        document.querySelectorAll('.btn-delete').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const idAEliminar = parseInt(e.target.getAttribute('data-id'));
-                inventario = inventario.filter(item => item.id !== idAEliminar);
-                localStorage.setItem('taller_inventario', JSON.stringify(inventario));
-                renderInventario();
-            });
+        renderInventario(filtrados);
+    }
+
+    // Escuchadores de eventos para los inputs de filtro de la primera fila
+    document.getElementById('filtro-fecha')?.addEventListener('input', aplicarFiltrosCruzados);
+    document.getElementById('filtro-descripcion')?.addEventListener('input', aplicarFiltrosCruzados);
+    document.getElementById('filtro-codigo1')?.addEventListener('input', aplicarFiltrosCruzados);
+    document.getElementById('filtro-proveedor')?.addEventListener('input', aplicarFiltrosCruzados);
+
+    // Ordenamiento por Clic: De más reciente a más antiguo (y viceversa)
+    document.getElementById('th-fecha')?.addEventListener('click', () => {
+        ordenFechaAsc = !ordenFechaAsc;
+        inventario.sort((a, b) => {
+            const fechaA = new Date(a.fecha || '1970-01-01');
+            const fechaB = new Date(b.fecha || '1970-01-01');
+            return ordenFechaAsc ? fechaA - fechaB : fechaB - fechaA;
+        });
+        aplicarFiltrosCruzados();
+    });
+
+    // Ordenamiento por Clic: Alfabético por Código 1
+    document.getElementById('th-codigo1')?.addEventListener('click', () => {
+        ordenCodigo1Asc = !ordenCodigo1Asc;
+        inventario.sort((a, b) => {
+            const codA = (a.codigo1 || '').toLowerCase();
+            const codB = (b.codigo1 || '').toLowerCase();
+            if (codA < codB) return ordenCodigo1Asc ? -1 : 1;
+            if (codA > codB) return ordenCodigo1Asc ? 1 : -1;
+            return 0;
+        });
+        aplicarFiltrosCruzados();
+    });
+
+    // Interceptar el envío del formulario para capturar la animación antes del reset
+    const formularioOriginal = document.getElementById('inventory-form');
+    if (formularioOriginal) {
+        formularioOriginal.addEventListener('submit', () => {
+            // Buscamos el ítem que se acaba de insertar en el array local
+            if (inventario.length > 0) {
+                const ultimoItem = inventario[inventario.length - 1];
+                idUltimoItemCreado = ultimoItem.id;
+            }
+            // Apagamos el estado de animación después de 3 segundos
+            setTimeout(() => {
+                idUltimoItemCreado = null;
+            }, 3000);
         });
     }
 

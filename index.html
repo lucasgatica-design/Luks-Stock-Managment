@@ -106,20 +106,38 @@
                 </section>
             </div>
 
-            <div class="lg:col-span-1">
-                <section class="bg-[#202024] p-5 rounded-xl border border-[#29292e] flex flex-col h-full max-h-[750px]">
-                    <div class="mb-4">
-                        <h2 class="text-lg font-medium mb-1">Items Registrados</h2>
-                        <p class="text-xs text-[#a8a8b3]">Lista en tiempo real de lo que hay en el taller.</p>
-                    </div>
+           <section class="bg-[#202024] p-6 rounded-xl border border-[#29292e] mt-6">
+    <h2 class="text-sm font-medium text-emerald-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+        <span>📦</span> Inventario del Taller
+    </h2>
 
-                    <div class="relative mb-4">
-                        <input type="text" id="search-input" placeholder="Buscar por código, ítem o proveedor..." class="w-full bg-[#121214] border border-[#29292e] rounded-lg pl-9 pr-4 py-2 text-xs focus:outline-none focus:border-emerald-500">
-                        <span class="absolute left-3 top-2.5 text-[#7c7c8a] text-xs">🔍</span>
-                    </div>
-
-                    <div id="inventory-list" class="space-y-3 overflow-y-auto pr-1 flex-1 custom-scrollbar">
-                        </div>
+    <div class="overflow-x-auto rounded-lg border border-[#29292e]">
+        <table class="w-full text-left border-collapse text-xs">
+            <thead>
+                <tr class="bg-[#121214] text-[#a8a8b3] border-b border-[#29292e] uppercase font-bold select-none">
+                    <th id="th-fecha" class="px-3 py-3 cursor-pointer hover:text-emerald-400 transition-colors whitespace-nowrap">Fecha ↕️</th>
+                    <th id="th-cantidad" class="px-3 py-3 whitespace-nowrap">Cant.</th>
+                    <th id="th-descripcion" class="px-3 py-3 whitespace-nowrap">Descripción</th>
+                    <th id="th-codigo1" class="px-3 py-3 cursor-pointer hover:text-emerald-400 transition-colors whitespace-nowrap">Código 1 ↕️</th>
+                    <th id="th-codigo2" class="px-3 py-3 whitespace-nowrap">Código 2</th>
+                    <th id="th-proveedor" class="px-3 py-3 whitespace-nowrap">Proveedor / Insumo</th>
+                    <th class="px-3 py-3 text-center whitespace-nowrap">Acción</th>
+                </tr>
+                <tr class="bg-[#18181c] border-b border-[#29292e]">
+                    <th class="p-1"><input type="text" id="filtro-fecha" placeholder="Filtrar..." class="w-full bg-[#121214] border border-[#29292e] rounded px-2 py-1 text-white focus:outline-none focus:border-emerald-500 text-[11px]"></th>
+                    <th class="p-1"></th>
+                    <th class="p-1"><input type="text" id="filtro-descripcion" placeholder="Buscar pieza..." class="w-full bg-[#121214] border border-[#29292e] rounded px-2 py-1 text-white focus:outline-none focus:border-emerald-500 text-[11px]"></th>
+                    <th class="p-1"><input type="text" id="filtro-codigo1" placeholder="Filtrar..." class="w-full bg-[#121214] border border-[#29292e] rounded px-2 py-1 text-white focus:outline-none focus:border-emerald-500 text-[11px]"></th>
+                    <th class="p-1"></th>
+                    <th class="p-1"><input type="text" id="filtro-proveedor" placeholder="Buscar..." class="w-full bg-[#121214] border border-[#29292e] rounded px-2 py-1 text-white focus:outline-none focus:border-emerald-500 text-[11px]"></th>
+                    <th class="p-1"></th>
+                </tr>
+            </thead>
+            <tbody id="inventario-cuerpo" class="divide-y divide-[#29292e] text-[#e1e1e6]">
+                </tbody>
+        </table>
+    </div>
+</section>
                 </section>
             </div>
 
