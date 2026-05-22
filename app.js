@@ -161,14 +161,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     alert("Se requiere la API Key para procesar el texto con Inteligencia Artificial.");
                     return;
                 }
-                localStorage.setItem('gemini_api_key', apiKey);
+                localStorage.setItem('gemini_api_key', apiKey.trim()); // Asegura quitar espacios fantasmas
             }
 
             // Cambiar el estado del botón para mostrar que la IA está pensando
             btnIa.disabled = true;
             btnIa.innerText = 'Analizando... ⏳';
 
-            // Prompt interno para obligar a Gemini a devolver exclusivamente un objeto JSON limpio
+            // Prompt interno robusto
             const promptInstrucciones = `Actúa como un extractor de datos experto para un taller. Analiza el siguiente texto desordenado que describe el ingreso de un material y extrae la información requerida estrictamente en este formato JSON, sin textos extras, sin bloques de código, solo el objeto JSON directo. Si un dato no existe, devuélvelo como cadena vacía "".
             Texto a analizar: "${textoDesordenado}"
             
@@ -194,12 +194,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     })
                 });
 
-                if (!response.ok) throw new Error('Error en la respuesta de la API de Google.');
+                if (!response.ok) throw new Error('Error de autenticación o respuesta de Google.');
 
                 const data = await response.json();
                 let respuestaTexto = data.candidates[0].content.parts[0].text.trim();
                 
-                // Limpiar posibles formatos de bloque de código markdown que a veces la IA agrega por error
+                // Limpieza absoluta de bloques de código markdown de la IA
                 respuestaTexto = respuestaTexto.replace(/```json|```/g, '').trim();
 
                 // Parsear el resultado enviado por Gemini
@@ -219,7 +219,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             } catch (error) {
                 console.error(error);
-                alert('❌ Hubo un problema al procesar el texto con la IA. Si la clave es errónea, limpia los datos de navegación del sitio.');
+                // TRUCO DE TALLER: Si falla, borramos la clave de la memoria para obligar a pedirla limpia la próxima vez
+                localStorage.removeItem('gemini_api_key');
+                alert('❌ Hubo un problema al procesar el texto con la IA. La clave vieja fue eliminada por seguridad. Por favor, vuelve a presionar "Procesar" y pega tu API Key de Google AI Studio asegurándote de que esté copiada completa y sin espacios.');
             } finally {
                 // Restaurar el botón a su estado original
                 btnIa.disabled = false;
@@ -228,4 +230,4 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-});
+}); // <-- Cierre del archivo
