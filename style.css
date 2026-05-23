@@ -43,3 +43,62 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     animation: fadeInDown 0.4s ease-out forwards;
     background-color: rgba(16, 185, 129, 0.05); /* Destello verde sutil al aparecer */
 }
+/* Brillo Esmeralda en el Formulario */
+.seccion-enfocada {
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.15) !important;
+    border-color: rgba(16, 185, 129, 0.4) !important;
+    transition: all 0.3s ease;
+}
+
+/* Tarjetas Acordeón Estilo Mobile */
+.item-card {
+    background: #121214;
+    border: 1px solid #29292e;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.item-header {
+    padding: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+}
+
+.item-details {
+    max-height: 0; /* Oculto por defecto */
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+    background: #18181c;
+}
+
+.item-card.active {
+    border-color: #10b981;
+}
+
+.item-card.active .item-details {
+    max-height: 500px; /* Se despliega */
+    border-top: 1px solid #29292e;
+    padding: 16px;
+}
+
+.chevron {
+    transition: transform 0.3s ease;
+    color: #7c7c8a;
+}
+
+.item-card.active .chevron {
+    transform: rotate(180deg);
+}
+
+@keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.animar-fila-nueva {
+    animation: fadeInDown 0.4s ease-out forwards;
+}
